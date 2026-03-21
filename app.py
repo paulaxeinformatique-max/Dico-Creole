@@ -1,23 +1,26 @@
 import streamlit as st
-from st_gsheets_connection import GSheetsConnection
+import pandas as pd
 
-# Configuration
 st.set_page_config(page_title="Dico Créole", page_icon="📖")
-st.title("📖 Dico Créole Interactif")
+st.title("📖 Dictionnaire Créole")
 
-# Connexion
+# Ton lien public (formaté pour être lu directement)
+URL_TABLEAU = "https://docs.google.com/spreadsheets/d/1x-WOFCIfgPcbH1oHiHBMJxNZ1jyQwtV2rOPxL8Sstsw/export?format=csv"
+
 try:
-    conn = st.connection("gsheets", type=GSheetsConnection)
-    df = conn.read()
-
+    # On télécharge les données du tableau
+    df = pd.read_csv(URL_TABLEAU)
+    
     recherche = st.text_input("Chercher un mot (ex: Kozé) :").strip()
 
     if recherche:
-        resultats = df[df['Mots'].str.contains(recherche, case=False, na=False)]
-        if not resultats.empty:
-            for index, row in resultats.iterrows():
-                st.success(f"**{row['Mots']}** : {row['Synonymes']}")
+        # On filtre la colonne 'Mots'
+        resultat = df[df['Mots'].str.contains(recherche, case=False, na=False)]
+        
+        if not resultat.empty:
+            for index, row in resultat.iterrows():
+                st.info(f"👉 **{row['Mots']}** : {row['Synonymes']}")
         else:
-            st.warning("Mot non trouvé.")
+            st.warning("Mot non trouvé dans le dictionnaire.")
 except Exception as e:
-    st.error("Connexion au tableau en cours... Vérifiez les Secrets.")
+    st.error("Connexion au tableau en cours... vérifiez que le partage est activé.")
