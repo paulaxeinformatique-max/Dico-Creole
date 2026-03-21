@@ -1,25 +1,26 @@
 import streamlit as st
+from streamlit_gsheets import GSheetsConnection
 
 st.set_page_config(page_title="Dico Créole", page_icon="📖")
+st.title("📖 Dico Créole Interactif")
 
-st.title("📖 Dictionnaire des Synonymes")
-st.subheader("Association des Écrivains - Démo")
+# Connexion au Google Sheet
+try:
+    conn = st.connection("gsheets", type=GSheetsConnection)
+    # On lit le tableau (TTL 0 pour avoir les changements tout de suite)
+    df = conn.read(ttl=0)
 
-# On met quelques mots directement dans le code pour la démo
-dico_demo = {
-    "kozer": "parler, discuter, échanger",
-    "zoli": "beau, joli, magnifique",
-    "manzer": "manger, prendre un repas",
-    "la kour": "le jardin, la cour"
-}
+    recherche = st.text_input("Chercher un synonyme (ex: Kozé) :").strip()
 
-recherche = st.text_input("Chercher un mot (ex: kozer, zoli) :").lower().strip()
+    if recherche:
+        # On cherche dans ta colonne 'Mots'
+        resultat = df[df['Mots'].str.contains(recherche, case=False, na=False)]
+        
+        if not resultat.empty:
+            for index, row in resultat.iterrows():
+                st.info(f"👉 **{row['Mots']}** : {row['Synonymes']}")
+        else:
+            st.warning("Ce mot n'est pas encore dans le dictionnaire.")
 
-if recherche:
-    if recherche in dico_demo:
-        st.success(f"**Synonymes :** {dico_demo[recherche]}")
-    else:
-        st.warning("Mot non trouvé dans cette version de démonstration.")
-
-st.divider()
-st.info("💡 Cet après-midi, nous testons l'outil. La version finale permettra à chaque écrivain d'ajouter des mots en temps réel.")
+except Exception as e:
+    st.error("L'application se connecte au tableau, patientez un instant...")
