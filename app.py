@@ -29,6 +29,3 @@ try:
             
 except Exception as e:
     st.error(f"Erreur technique : {e}")
-
-Fais la modification sur GitHub (bouton "Edit", coller, puis "Commit changes"). Attends 1 minute, rafraîchis ton application sur ton téléphone, et dis-moi si "irlé" fait bien remonter la définition de "Kozé" !
-
