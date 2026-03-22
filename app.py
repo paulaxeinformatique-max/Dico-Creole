@@ -29,10 +29,6 @@ try:
             
 except Exception as e:
     st.error(f"Erreur technique : {e}")
-🚀 Ce qui va changer :
-Avec ce code, si un utilisateur cherche "irlé" (ou même juste "irle"), le moteur va fouiller dans les synonymes, trouver la ligne de "Kozé", et lui afficher :
-👉 Kozé
-Synonymes : Morgonyé-irlé-dir-ekspliké
 
 Fais la modification sur GitHub (bouton "Edit", coller, puis "Commit changes"). Attends 1 minute, rafraîchis ton application sur ton téléphone, et dis-moi si "irlé" fait bien remonter la définition de "Kozé" !
 
