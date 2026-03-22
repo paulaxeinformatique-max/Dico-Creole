@@ -4,34 +4,26 @@ import pandas as pd
 st.set_page_config(page_title="Dico Créole", page_icon="📖")
 st.title("📖 Dictionnaire Créole")
 
-# MÉTHODE DE SÉCURITÉ : On nettoie l'ID
-# Copie bien l'ID entre les guillemets ci-dessous
-SHEET_ID = "1x-WOFCIfgPcbH1oHiHBMJxNZ1jyQwtV2rOPxL8Sstsw"
-URL_TABLEAU = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/export?format=csv"
-
-@st.cache_data(ttl=600) # Pour que ça charge plus vite
-def load_data(url):
-    return pd.read_csv(url)
+# Le lien corrigé avec le grand "S" !
+URL_TABLEAU = "https://docs.google.com/spreadsheets/d/1x-WOFCIfgPcbH1oHiHBMJxNZ1jyQwtV2rOPxL8SStsw/export?format=csv"
 
 try:
-    df = load_data(URL_TABLEAU)
+    df = pd.read_csv(URL_TABLEAU)
     
-    recherche = st.text_input("Chercher un mot (ex: Kozé) :").strip()
+    recherche = st.text_input("Chercher un mot (ex: Kozé) :").strip().lower()
 
     if recherche:
-        # On trouve automatiquement les colonnes même si les noms changent un peu
-        col_mots = [c for c in df.columns if 'mot' in c.lower()][0]
-        col_syn = [c for c in df.columns if 'syn' in c.lower()][0]
-
-        mask = df[col_mots].str.contains(recherche, case=False, na=False)
-        resultat = df[mask]
+        # On cherche dans la colonne 'Mots'
+        resultat = df[df['Mots'].str.lower().str.contains(recherche, na=False)]
         
         if not resultat.empty:
             for index, row in resultat.iterrows():
-                st.info(f"👉 **{row[col_mots]}** : {row[col_syn]}")
+                st.success(f"👉 **{row['Mots']}**")
+                st.write(f"Synonymes : {row['Synonymes']}")
         else:
-            st.warning(f"Le mot '{recherche}' n'est pas dans le dictionnaire.")
-
+            st.warning("Mot non trouvé dans le dictionnaire.")
+            
 except Exception as e:
     st.error(f"Erreur technique : {e}")
     st.write("Vérifiez que l'ID du tableau est correct dans le code.")
+
