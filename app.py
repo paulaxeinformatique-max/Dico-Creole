@@ -25,31 +25,42 @@ try:
     # Barre de recherche
     recherche_input = st.text_input("Chercher un mot :", value=st.session_state.recherche).strip().lower()
 
-    if recherche_input:
-        # On cherche dans 'Mots' ET dans 'Synonymes'
+if recherche_input:
+        # On s'assure que la session_state est à jour avec la saisie manuelle
+        st.session_state.recherche = recherche_input
+        
+        # Recherche dans les deux colonnes
         mask_principal = df['Mots'].str.lower() == recherche_input
         mask_synonyme = df['Synonymes'].str.lower().str.contains(recherche_input, na=False)
         
         resultat = df[mask_principal | mask_synonyme]
         
         if not resultat.empty:
-            for index, row in resultat.iterrows():
-                st.subheader(f"Résultat pour : {row['Mots']}")
-                
-                # Découpage des synonymes par la virgule
-                syns = [s.strip() for s in str(row['Synonymes']).split(',')]
-                
-                # Affichage des boutons
-                cols = st.columns(8)
-                for i, s in enumerate(syns):
-                    if s.lower() != recherche_input:
-                        if cols[i % 8].button(s, key=f"{s}_{index}_{i}"):
-                            st.session_state.recherche = s.lower()
-                            st.rerun()
-                    else:
-                        cols[i % 8].markdown(f"**{s}**") 
+            # On ne prend que le premier résultat pour éviter les doublons d'affichage
+            row = resultat.iloc[0] 
+            
+            # MISE À JOUR DYNAMIQUE DU TITRE
+            st.subheader(f"Résultat pour : {row['Mots']}")
+            st.write("---")
+            
+            # Découpage des synonymes
+            syns = [s.strip() for s in str(row['Synonymes']).split(',')]
+            
+            st.write("### Synonymes cliquables :")
+            # On filtre la liste pour NE PAS afficher le mot qu'on vient de chercher
+            syns_filtres = [s for s in syns if s.lower() != recherche_input]
+            
+            if syns_filtres:
+                cols = st.columns(6) # 6 colonnes pour que ce soit lisible sur mobile
+                for i, s in enumerate(syns_filtres):
+                    # Chaque bouton met à jour la recherche et relance l'app
+                    if cols[i % 6].button(s, key=f"btn_{s}_{i}"):
+                        st.session_state.recherche = s.lower()
+                        st.rerun()
+            else:
+                st.info("Ce mot est présent, mais n'a pas d'autres synonymes listés ici.")
         else:
-            st.warning("Mot non trouvé dans la base actuelle.")
+            st.warning(f"Le mot '{recherche_input}' n'est pas encore dans le dictionnaire.")
 
 except Exception as e:
     # C'est ce bloc 'except' qui manquait dans ton fichier !
