@@ -1,6 +1,20 @@
 import streamlit as st
 import pandas as pd
-
+# --- ASTUCE POUR DÉSACTIVER LE CORRECTEUR ORTHOGRAPHIQUE ---
+st.markdown(
+    """
+    <script>
+        // On cherche tous les champs de saisie (input) de la page
+        var inputs = window.parent.document.querySelectorAll('input');
+        for (var i = 0; i < inputs.length; i++) {
+            inputs[i].setAttribute('spellcheck', 'false');
+            inputs[i].setAttribute('autocomplete', 'off');
+            inputs[i].setAttribute('autocorrect', 'off');
+        }
+    </script>
+    """,
+    unsafe_allow_html=True
+)
 # 1. Configuration
 st.set_page_config(page_title="DES Créole", page_icon="📖", layout="wide")
 
