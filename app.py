@@ -61,7 +61,7 @@ try:
             syns_propres = [s.strip() for s in syns_bruts if s.strip().lower() != mot_final]
             
             if syns_propres:
-                st.write(f"### Synonymes pour **{row['Mots']}** :")
+                st.write(f"### Synonymes:")
                 cols = st.columns(6)
                 for i, s in enumerate(syns_propres):
                     cols[i % 6].button(
