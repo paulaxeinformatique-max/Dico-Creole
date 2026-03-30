@@ -21,45 +21,48 @@ if 'mot_recherche' not in st.session_state:
 if 'compteur' not in st.session_state:
     st.session_state.compteur = 0
 
-# Fonction appelée lors du clic sur un bouton
+# Fonction de mise à jour lors du clic
 def cliquer_mot(nouveau_mot):
     st.session_state.mot_recherche = nouveau_mot
-    st.session_state.compteur += 1 # On change la clé pour forcer le rafraîchissement
+    st.session_state.compteur += 1
 
 # 5. Interface
 try:
     df = charger_donnees()
     
-    # BARRE DE RECHERCHE avec une clé dynamique
+    # BARRE DE RECHERCHE (Clé dynamique pour forcer le rafraîchissement)
     recherche_saisie = st.text_input(
         "Chercher un mot :", 
         value=st.session_state.mot_recherche,
         key=f"barre_{st.session_state.compteur}" 
     ).strip().lower()
 
-    # Si l'utilisateur tape manuellement
+    # Si l'utilisateur tape manuellement, on synchronise et on relance
     if recherche_saisie != st.session_state.mot_recherche:
         st.session_state.mot_recherche = recherche_saisie
         st.rerun()
 
+    # On définit le mot final à traiter
     mot_final = st.session_state.mot_recherche
 
     if mot_final:
-        # Recherche précise
+        # Recherche précise dans 'Mots' ou 'Synonymes'
         mask_principal = df['Mots'].str.lower() == mot_final
         mask_synonyme = df['Synonymes'].str.lower().str.contains(f"\\b{mot_final}\\b", na=False, regex=True)
         
         resultat = df[mask_principal | mask_synonyme]
         
         if not resultat.empty:
+            # ON RÉCUPÈRE LA LIGNE
             row = resultat.iloc[0]
-            mot_titre = str(row['Mots'])
             
-            # MISE À JOUR DU TITRE
-            st.subheader(f"Résultat pour : {mot_titre}")
+            # --- CORRECTION DU TITRE ICI ---
+            # On utilise le mot exact provenant de la base de données pour le titre
+            mot_titre_reel = str(row['Mots'])
+            st.markdown(f"## Résultat pour : **{mot_titre_reel}**")
             st.write("---")
             
-            # Nettoyage et affichage des synonymes
+            # Gestion des synonymes
             syns_bruts = str(row['Synonymes']).split(',')
             syns_propres = [s.strip() for s in syns_bruts if s.strip().lower() != mot_final]
             
@@ -67,7 +70,6 @@ try:
                 st.write("### Synonymes cliquables :")
                 cols = st.columns(6)
                 for i, s in enumerate(syns_propres):
-                    # On utilise on_click pour garantir que l'action est enregistrée
                     cols[i % 6].button(
                         s, 
                         key=f"btn_{s}_{i}_{st.session_state.compteur}",
@@ -75,7 +77,7 @@ try:
                         args=(s.lower(),)
                     )
             else:
-                st.info("Ce mot est connu, mais n'a pas d'autres synonymes listés.")
+                st.info("Ce mot est présent, mais n'a pas encore d'autres synonymes listés.")
         else:
             st.warning(f"Le mot '{mot_final}' n'est pas encore dans le dictionnaire.")
 
