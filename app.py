@@ -4,7 +4,7 @@ import pandas as pd
 # 1. Configuration
 st.set_page_config(page_title="DES Créole", page_icon="📖", layout="wide")
 
-# 2. Titre
+# 2. Titre principal de l'application
 st.title("📖 Dictionnaire Électronique des Synonymes Créole")
 st.markdown("---")
 
@@ -30,44 +30,38 @@ def cliquer_mot(nouveau_mot):
 try:
     df = charger_donnees()
     
-    # BARRE DE RECHERCHE (Clé dynamique pour forcer le rafraîchissement)
+    # BARRE DE RECHERCHE (Clé dynamique pour le rafraîchissement)
     recherche_saisie = st.text_input(
         "Chercher un mot :", 
         value=st.session_state.mot_recherche,
         key=f"barre_{st.session_state.compteur}" 
     ).strip().lower()
 
-    # Si l'utilisateur tape manuellement, on synchronise et on relance
+    # Synchronisation manuelle
     if recherche_saisie != st.session_state.mot_recherche:
         st.session_state.mot_recherche = recherche_saisie
         st.rerun()
 
-    # On définit le mot final à traiter
     mot_final = st.session_state.mot_recherche
 
     if mot_final:
-        # Recherche précise dans 'Mots' ou 'Synonymes'
+        # Recherche dans 'Mots' ou 'Synonymes'
         mask_principal = df['Mots'].str.lower() == mot_final
         mask_synonyme = df['Synonymes'].str.lower().str.contains(f"\\b{mot_final}\\b", na=False, regex=True)
         
         resultat = df[mask_principal | mask_synonyme]
         
         if not resultat.empty:
-            # ON RÉCUPÈRE LA LIGNE
             row = resultat.iloc[0]
             
-            # --- CORRECTION DU TITRE ICI ---
-            # On utilise le mot exact provenant de la base de données pour le titre
-            mot_titre_reel = str(row['Mots'])
-            st.markdown(f"## Résultat pour : **{mot_titre_reel}**")
-            st.write("---")
+            # On a supprimé la ligne "Résultat pour :" ici pour épurer
             
-            # Gestion des synonymes
+            # Gestion et affichage des synonymes
             syns_bruts = str(row['Synonymes']).split(',')
             syns_propres = [s.strip() for s in syns_bruts if s.strip().lower() != mot_final]
             
             if syns_propres:
-                st.write("### Synonymes cliquables :")
+                st.write(f"### Synonymes pour **{row['Mots']}** :")
                 cols = st.columns(6)
                 for i, s in enumerate(syns_propres):
                     cols[i % 6].button(
@@ -77,7 +71,7 @@ try:
                         args=(s.lower(),)
                     )
             else:
-                st.info("Ce mot est présent, mais n'a pas encore d'autres synonymes listés.")
+                st.info(f"Le mot **{row['Mots']}** est présent, mais n'a pas encore d'autres synonymes listés.")
         else:
             st.warning(f"Le mot '{mot_final}' n'est pas encore dans le dictionnaire.")
 
