@@ -4,88 +4,111 @@ import pandas as pd
 # 1. CONFIGURATION
 st.set_page_config(page_title="DES Créole", page_icon="📖", layout="wide")
 
-# 2. CHARGEMENT
+# 2. CHARGEMENT DES DONNÉES
 URL_TABLEAU = "https://docs.google.com/spreadsheets/d/1x-WOFCIfgPcbH1oHiHBMJxNZ1jyQwtV2rOPxL8SStsw/export?format=csv"
 
 @st.cache_data(ttl=60)
 def charger_donnees():
-    return pd.read_csv(URL_TABLEAU)
+    try:
+        return pd.read_csv(URL_TABLEAU)
+    except:
+        return pd.DataFrame(columns=['Mots', 'Synonymes'])
 
-# 3. NAVIGATION
-st.sidebar.title("📖 Menu Principal")
-page = st.sidebar.radio("Aller vers :", ["🔎 Dictionnaire", "✍️ Espace Auteurs"])
+# 3. GESTION DE L'ÉTAT (Session State)
+if 'mot_recherche' not in st.session_state:
+    st.session_state.mot_recherche = ""
 
-# --- PAGE : DICTIONNAIRE ---
+# 4. NAVIGATION LATERALE
+st.sidebar.title("📖 DES Créole")
+page = st.sidebar.radio("Navigation", ["🔎 Dictionnaire", "✍️ Espace Auteurs"])
+
+# --- PAGE 1 : DICTIONNAIRE ---
 if page == "🔎 Dictionnaire":
-    st.title("🔎 Recherche dans le Dictionnaire")
+    st.title("🔎 Recherche")
     
     df = charger_donnees()
-    liste_mots = sorted(df['Mots'].dropna().unique().tolist()) # Liste pour l'auto-complétion
+    # Liste alphabétique des mots (Colonne A)
+    liste_mots = sorted(df['Mots'].dropna().unique().tolist())
 
-    if 'mot_recherche' not in st.session_state:
-        st.session_state.mot_recherche = ""
-
-    # Ligne de recherche avec bouton "Nouvelle Recherche"
-    col1, col2 = st.columns([4, 1])
+    # Barre de commande : Recherche + Reset
+    col_search, col_reset = st.columns([4, 1])
     
-    with col1:
-        # L'auto-complétion se fait via selectbox ici
-        choix = st.selectbox("Tapez ou choisissez un mot :", 
-                             options=[""] + liste_mots, 
-                             index=0 if st.session_state.mot_recherche == "" else liste_mots.index(st.session_state.mot_recherche) + 1 if st.session_state.mot_recherche in liste_mots else 0)
-        
-    with col2:
-        st.write(" ") # Calage visuel
-        if st.button("🔄 Nouvelle recherche"):
+    with col_reset:
+        st.write(" ") # Alignement
+        if st.button("🔄 Effacer", use_container_width=True):
             st.session_state.mot_recherche = ""
             st.rerun()
 
-    recherche = choix.lower() if choix else ""
+    with col_search:
+        # On calcule l'index pour que la box suive le bouton cliqué
+        index_auto = 0
+        if st.session_state.mot_recherche in liste_mots:
+            index_auto = liste_mots.index(st.session_state.mot_recherche) + 1
 
-    if recherche:
-        mask = (df['Mots'].str.lower() == recherche) | (df['Synonymes'].str.lower().str.contains(rf"\b{recherche}\b", na=False, regex=True))
+        choix = st.selectbox(
+            "Tapez pour filtrer les mots :",
+            options=[""] + liste_mots,
+            index=index_auto
+        )
+
+    # Si le choix change manuellement dans la liste
+    if choix != st.session_state.mot_recherche:
+        st.session_state.mot_recherche = choix
+        st.rerun()
+
+    # Affichage des résultats
+    if st.session_state.mot_recherche:
+        mot_etudie = st.session_state.mot_recherche
+        
+        # On cherche la ligne correspondante
+        mask = (df['Mots'].str.lower() == mot_etudie.lower())
         resultat = df[mask]
         
         if not resultat.empty:
             row = resultat.iloc[0]
-            st.markdown(f"### Mot étudié : **{row['Mots']}**")
-            syns = [s.strip() for s in str(row['Synonymes']).split(',') if s.strip()]
+            st.markdown(f"### Synonymes pour : **{row['Mots']}**")
             st.write("---")
-            st.write("#### Synonymes :")
-            cols = st.columns(5)
-            for i, s in enumerate(syns):
-                if cols[i % 5].button(s, key=f"btn_{s}_{i}"):
-                    st.session_state.mot_recherche = s.strip()
-                    st.rerun()
+            
+            syns = [s.strip() for s in str(row['Synonymes']).split(',') if s.strip()]
+            
+            if syns:
+                cols = st.columns(5)
+                for i, s in enumerate(syns):
+                    # Chaque bouton met à jour le mot_recherche
+                    if cols[i % 5].button(s, key=f"btn_{s}_{i}"):
+                        st.session_state.mot_recherche = s.strip()
+                        st.rerun()
+            else:
+                st.info("Aucun synonyme listé pour ce mot.")
+        else:
+            # Si le mot n'est pas en colonne A mais existe dans les synonymes d'un autre
+            st.warning(f"Le mot '{mot_etudie}' est mentionné comme synonyme mais n'a pas encore sa propre fiche.")
 
-# --- PAGE : ESPACE AUTEURS ---
+# --- PAGE 2 : ESPACE AUTEURS ---
 elif page == "✍️ Espace Auteurs":
-    st.title("✍️ Espace de Saisie Sécurisé")
+    st.title("✍️ Espace de Saisie")
     
-    code = st.text_input("Code d'accès :", type="password")
+    pwd = st.text_input("Code d'accès :", type="password")
     
-    if code == "1234":
-        st.success("Accès Auteur validé")
+    if pwd == "1234":
+        st.success("Accès autorisé")
         st.write("---")
         
-        # FORMULAIRE DE SAISIE
-        st.subheader("Ajouter ou modifier une entrée")
-        
-        with st.form("form_saisie"):
-            nouveau_mot = st.text_input("Mot principal (ex: Kozé)")
-            nouveaux_syns = st.text_area("Synonymes (séparés par des virgules)")
+        with st.form("nouveau_mot_form"):
+            st.subheader("Nouvelle entrée")
+            mot_saisi = st.text_input("Mot principal")
+            syns_saisis = st.text_area("Synonymes (séparés par des virgules)")
             
-            submit = st.form_submit_button("Prévisualiser")
+            envoi = st.form_submit_button("Prévisualiser l'affichage")
             
-            if submit:
-                st.info("Voici à quoi ressemblera l'entrée :")
-                st.markdown(f"### **{nouveau_mot}**")
-                syn_list = nouveaux_syns.split(',')
-                cols = st.columns(6)
-                for i, s in enumerate(syn_list):
-                    cols[i % 6].button(s.strip(), key=f"preview_{i}")
+            if envoi:
+                st.info("Aperçu de ce que verront les utilisateurs :")
+                st.markdown(f"### Synonymes pour : **{mot_saisi}**")
+                s_list = [x.strip() for x in syns_saisis.split(',')]
+                c = st.columns(5)
+                for i, s in enumerate(s_list):
+                    c[i % 5].button(s, key=f"prev_{i}")
                 
-                st.warning("⚠️ L'enregistrement automatique vers Google Sheets arrive à l'étape suivante.")
-
-    elif code != "":
+                st.warning("ℹ️ Note : Le bouton 'Enregistrer' sera activé après la configuration de la sécurité Google.")
+    elif pwd != "":
         st.error("Code incorrect")
