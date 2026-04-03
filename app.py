@@ -1,70 +1,91 @@
 import streamlit as st
 import pandas as pd
 
-# 1. CONFIGURATION DE LA PAGE
+# 1. CONFIGURATION
 st.set_page_config(page_title="DES Créole", page_icon="📖", layout="wide")
 
-# 2. CHARGEMENT DES DONNÉES
+# 2. CHARGEMENT
 URL_TABLEAU = "https://docs.google.com/spreadsheets/d/1x-WOFCIfgPcbH1oHiHBMJxNZ1jyQwtV2rOPxL8SStsw/export?format=csv"
 
-@st.cache_data(ttl=60) # Cache de 1 minute pour voir les modifs rapidement
+@st.cache_data(ttl=60)
 def charger_donnees():
     return pd.read_csv(URL_TABLEAU)
 
-# 3. BARRE LATÉRALE (NAVIGATION)
+# 3. NAVIGATION
 st.sidebar.title("📖 Menu Principal")
 page = st.sidebar.radio("Aller vers :", ["🔎 Dictionnaire", "✍️ Espace Auteurs"])
 
-# --- PAGE : DICTIONNAIRE (RECHERCHE) ---
+# --- PAGE : DICTIONNAIRE ---
 if page == "🔎 Dictionnaire":
-    st.title("🔎 Dictionnaire des Synonymes")
+    st.title("🔎 Recherche dans le Dictionnaire")
     
+    df = charger_donnees()
+    liste_mots = sorted(df['Mots'].dropna().unique().tolist()) # Liste pour l'auto-complétion
+
     if 'mot_recherche' not in st.session_state:
         st.session_state.mot_recherche = ""
-    if 'compteur' not in st.session_state:
-        st.session_state.compteur = 0
 
-    def cliquer_mot(nouveau_mot):
-        st.session_state.mot_recherche = nouveau_mot
-        st.session_state.compteur += 1
+    # Ligne de recherche avec bouton "Nouvelle Recherche"
+    col1, col2 = st.columns([4, 1])
+    
+    with col1:
+        # L'auto-complétion se fait via selectbox ici
+        choix = st.selectbox("Tapez ou choisissez un mot :", 
+                             options=[""] + liste_mots, 
+                             index=0 if st.session_state.mot_recherche == "" else liste_mots.index(st.session_state.mot_recherche) + 1 if st.session_state.mot_recherche in liste_mots else 0)
+        
+    with col2:
+        st.write(" ") # Calage visuel
+        if st.button("🔄 Nouvelle recherche"):
+            st.session_state.mot_recherche = ""
+            st.rerun()
 
-    # Barre de recherche
-    recherche = st.text_input("Chercher un mot :", value=st.session_state.mot_recherche, key=f"in_{st.session_state.compteur}").strip().lower()
+    recherche = choix.lower() if choix else ""
 
     if recherche:
-        try:
-            df = charger_donnees()
-            mask = (df['Mots'].str.lower() == recherche) | (df['Synonymes'].str.lower().str.contains(rf"\b{recherche}\b", na=False, regex=True))
-            resultat = df[mask]
-            
-            if not resultat.empty:
-                row = resultat.iloc[0]
-                st.markdown(f"### Mot étudié : **{row['Mots']}**")
-                
-                syns = [s.strip() for s in str(row['Synonymes']).split(',') if s.strip()]
-                st.write("---")
-                st.write("#### Synonymes :")
-                cols = st.columns(5)
-                for i, s in enumerate(syns):
-                    if cols[i % 5].button(s, key=f"btn_{s}_{i}_{st.session_state.compteur}"):
-                        cliquer_mot(s.lower())
-                        st.rerun()
-            else:
-                st.warning(f"Le mot '{recherche}' n'est pas encore répertorié.")
-        except Exception as e:
-            st.error("Erreur lors du chargement du dictionnaire.")
+        mask = (df['Mots'].str.lower() == recherche) | (df['Synonymes'].str.lower().str.contains(rf"\b{recherche}\b", na=False, regex=True))
+        resultat = df[mask]
+        
+        if not resultat.empty:
+            row = resultat.iloc[0]
+            st.markdown(f"### Mot étudié : **{row['Mots']}**")
+            syns = [s.strip() for s in str(row['Synonymes']).split(',') if s.strip()]
+            st.write("---")
+            st.write("#### Synonymes :")
+            cols = st.columns(5)
+            for i, s in enumerate(syns):
+                if cols[i % 5].button(s, key=f"btn_{s}_{i}"):
+                    st.session_state.mot_recherche = s.strip()
+                    st.rerun()
 
-# --- PAGE : ESPACE AUTEURS (SÉCURISÉ) ---
+# --- PAGE : ESPACE AUTEURS ---
 elif page == "✍️ Espace Auteurs":
     st.title("✍️ Espace de Saisie Sécurisé")
-    st.write("Cet espace est réservé aux écrivains pour l'enrichissement du dictionnaire.")
     
-    # Simple protection par mot de passe
-    code = st.text_input("Entrez votre code d'accès :", type="password")
+    code = st.text_input("Code d'accès :", type="password")
     
-    if code == "1234": # C'est le code temporaire, on le changera ensemble
-        st.success("Bienvenue ! Vous êtes identifié.")
-        st.info("Bientôt, vous trouverez ici le formulaire pour ajouter des mots directement.")
-        # C'est ici que nous coderons le formulaire à l'étape suivante
+    if code == "1234":
+        st.success("Accès Auteur validé")
+        st.write("---")
+        
+        # FORMULAIRE DE SAISIE
+        st.subheader("Ajouter ou modifier une entrée")
+        
+        with st.form("form_saisie"):
+            nouveau_mot = st.text_input("Mot principal (ex: Kozé)")
+            nouveaux_syns = st.text_area("Synonymes (séparés par des virgules)")
+            
+            submit = st.form_submit_button("Prévisualiser")
+            
+            if submit:
+                st.info("Voici à quoi ressemblera l'entrée :")
+                st.markdown(f"### **{nouveau_mot}**")
+                syn_list = nouveaux_syns.split(',')
+                cols = st.columns(6)
+                for i, s in enumerate(syn_list):
+                    cols[i % 6].button(s.strip(), key=f"preview_{i}")
+                
+                st.warning("⚠️ L'enregistrement automatique vers Google Sheets arrive à l'étape suivante.")
+
     elif code != "":
-        st.error("Code d'accès incorrect.")
+        st.error("Code incorrect")
