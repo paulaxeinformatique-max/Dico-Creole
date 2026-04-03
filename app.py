@@ -98,15 +98,56 @@ if page == "🔎 Dictionnaire":
                 if cols_inv[i % 5].button(m_inv, key=f"inv_{m_inv}_{i}"):
                     st.session_state.mot_recherche = m_inv
                     st.rerun()
-
-# --- PAGE 2 : ESPACE AUTEURS (Inchangé pour l'instant) ---
+# --- PAGE 2 : ESPACE AUTEURS (Saisie et Prévisualisation) ---
 elif page == "✍️ Espace Auteurs":
-    st.title("✍️ Espace de Saisie")
-    pwd = st.text_input("Code d'accès :", type="password")
+    st.title("✍️ Espace de Saisie des Auteurs")
+    st.write("Cet outil vous permet de préparer vos fiches avant de les ajouter au dictionnaire.")
+
+    # 1. Sécurité
+    pwd = st.text_input("Entrez votre code d'accès :", type="password")
+    
     if pwd == "1234":
-        st.success("Accès autorisé")
-        with st.form("ajout"):
-            m = st.text_input("Nouveau mot")
-            s = st.text_area("Synonymes")
-            if st.form_submit_button("Prévisualiser"):
-                st.write(f"Aperçu pour **{m}**")
+        st.success("Identification réussie. Vous pouvez saisir un mot.")
+        st.write("---")
+
+        # 2. Formulaire de saisie
+        with st.form("formulaire_saisie"):
+            col_m, col_s = st.columns([1, 2])
+            with col_m:
+                nouveau_mot = st.text_input("Mot à ajouter :", placeholder="ex: Kozé").strip()
+            with col_s:
+                nouveaux_syns = st.text_area("Synonymes (séparez par des virgules) :", placeholder="ex: Palé, Diskuté, Bat-la-lang")
+            
+            # Bouton de validation du formulaire
+            bouton_preview = st.form_submit_button("👁️ Prévisualiser la fiche")
+
+        # 3. Logique de Prévisualisation
+        if bouton_preview:
+            if not nouveau_mot:
+                st.error("Veuillez au moins saisir un mot principal.")
+            else:
+                st.write("### Aperçu du résultat final :")
+                st.info("C'est ainsi que les utilisateurs verront votre saisie dans le dictionnaire.")
+                
+                # Encadré visuel pour la preview
+                with st.container(border=True):
+                    st.markdown(f"### Synonymes pour : **{nouveau_mot}**")
+                    
+                    # On nettoie la liste des synonymes
+                    if nouveaux_syns:
+                        liste_preview = [s.strip() for s in nouveaux_syns.split(',') if s.strip()]
+                        
+                        if liste_preview:
+                            cols = st.columns(5)
+                            for i, s in enumerate(liste_preview):
+                                cols[i % 5].button(s, key=f"preview_btn_{i}")
+                        else:
+                            st.warning("Aucun synonyme valide détecté (vérifiez les virgules).")
+                    else:
+                        st.write("*Aucun synonyme saisi.*")
+                
+                st.write("---")
+                st.warning("⚠️ **Note technique** : Le bouton 'Enregistrer définitivement' sera ajouté dès que nous aurons configuré la connexion sécurisée avec votre Google Sheet.")
+
+    elif pwd != "":
+        st.error("Code d'accès incorrect. Veuillez recommencer.")    
