@@ -23,13 +23,19 @@ def charger_donnees():
     return groupes, sorted(list(tous_les_mots))
 
 def enregistrer_dans_sheets(nouveau_groupe):
-    # On va chercher la clé dans le coffre-fort (Secrets)
-    scope = ["https://www.googleapis.com/auth/spreadsheets"]
+    # --- C'EST ICI QUE ÇA SE PASSE ---
+    # On ajoute la permission "drive" pour pouvoir modifier le fichier
+    scope = [
+        "https://www.googleapis.com/auth/spreadsheets",
+        "https://www.googleapis.com/auth/drive"
+    ]
+    # --------------------------------
+    
     creds_dict = st.secrets["gcp_service_account"]
     credentials = Credentials.from_service_account_info(creds_dict, scopes=scope)
     client = gspread.authorize(credentials)
     
-    # Ouverture du tableau (Vérifie bien que le nom est identique sur Google Sheets)
+    # Le reste ne change pas...
     sheet = client.open("Dico Synonymes Creole.").sheet1
     sheet.append_row([nouveau_groupe, ""])
 
